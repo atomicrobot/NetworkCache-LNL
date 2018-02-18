@@ -26,6 +26,7 @@ class HttpCacheTests {
     lateinit var client: OkHttpClient
     lateinit var baseUrl: HttpUrl
     lateinit var cache: Cache
+    lateinit var request: Request
 
     @Before
     fun setup() {
@@ -36,6 +37,9 @@ class HttpCacheTests {
         server.start(8000)
         baseUrl = server.url("/v1/model/")
         cache = Cache(cacheDir, DISK_CACHE_SIZE.toLong())
+        request = Request.Builder()
+                .url(baseUrl)
+                .build()
 
         val logging = HttpLoggingInterceptor()
         logging.level = HttpLoggingInterceptor.Level.BODY
@@ -55,9 +59,6 @@ class HttpCacheTests {
         server.enqueue(MockResponse().setBody("hello, world!"))
         server.enqueue(MockResponse().setBody("hello, again!"))
         server.enqueue(MockResponse().setBody("hello, one more time!"))
-        val request = Request.Builder()
-                .url(baseUrl)
-                .build()
 
         val response1 = client.newCall(request).execute()
         val response2 = client.newCall(request).execute()
@@ -70,11 +71,13 @@ class HttpCacheTests {
 
     @Test
     fun testMaxAge() {
-        server.enqueue(MockResponse().setHeader("cache-control", "max-age=1").setBody("First Response"))
-        server.enqueue(MockResponse().setHeader("cache-control", "max-age=2").setBody("Second Response"))
-        val request = Request.Builder()
-                .url(baseUrl)
-                .build()
+        server.enqueue(MockResponse()
+                .setHeader("cache-control", "max-age=1")
+                .setBody("First Response"))
+        server.enqueue(MockResponse()
+                .setBody("Second Response"))
+        server.enqueue(MockResponse()
+                .setBody("Third Response"))
 
         val response1 = client.newCall(request).execute()
         assertEquals(1, cache.requestCount())
@@ -96,6 +99,12 @@ class HttpCacheTests {
         assertEquals(2, cache.networkCount())
         assertEquals(1, cache.hitCount())
         assertEquals("Second Response", response3.body()?.string())
+
+        val response4 = client.newCall(request).execute()
+        assertEquals(4, cache.requestCount())
+        assertEquals(3, cache.networkCount())
+        assertEquals(1, cache.hitCount())
+        assertEquals("Third Response", response4.body()?.string())
     }
 
     // Also referred to as conditionally cached
@@ -107,9 +116,6 @@ class HttpCacheTests {
                 .setBody("First Response"))
         server.enqueue(MockResponse()
                 .setResponseCode(304))
-        val request = Request.Builder()
-                .url(baseUrl)
-                .build()
 
         val response1 = client.newCall(request).execute()
         assertEquals(1, cache.requestCount())
@@ -117,17 +123,86 @@ class HttpCacheTests {
         assertEquals(0, cache.hitCount())
         assertEquals("First Response", response1.body()?.string())
 
-// OkHTTP is adding the If-None-Match header internally
+
+//        OkHTTP is adding the If-None-Match header internally.  If-None-Match example:
 //        val request2 = Request.Builder()
 //                .url(baseUrl)
 //                .header("If-None-Match", "v1")
 //                .build()
 
+//        OkHTTP handles the 304 internally.
+//        A 200 is exposed and the body is retrieved from the cache
         val response2 = client.newCall(request).execute()
         assertEquals(2, cache.requestCount())
         assertEquals(2, cache.networkCount())
         assertEquals(1, cache.hitCount())
         assertEquals("First Response", response2.body()?.string())
+        assertEquals(200, response2.code())
+    }
+
+    @Test
+    fun testNoCacheHeader() {
+        server.enqueue(MockResponse()
+                .setHeader("cache-control", "no-cache")
+                .setBody("First Response"))
+        server.enqueue(MockResponse()
+                .setBody("Second Response"))
+
+        val response1 = client.newCall(request).execute()
+        assertEquals(1, cache.requestCount())
+        assertEquals(1, cache.networkCount())
+        assertEquals(0, cache.hitCount())
+        assertEquals("First Response", response1.body()?.string())
+
+        val response2 = client.newCall(request).execute()
+        assertEquals(2, cache.requestCount())
+        assertEquals(2, cache.networkCount())
+        assertEquals(0, cache.hitCount())
+        assertEquals("Second Response", response2.body()?.string())
+    }
+
+    @Test
+    fun testNoCacheHeaderWithEtag() {
+        server.enqueue(MockResponse()
+                .setHeader("cache-control", "no-cache")
+                .setBody("First Response"))
+        server.enqueue(MockResponse()
+                .setHeader("cache-control", "no-cache")
+                .setHeader("ETag", "v1")
+                .setBody("Second Response"))
+        server.enqueue(MockResponse()
+                .setResponseCode(304))
+        server.enqueue(MockResponse()
+                .setResponseCode(304))
+
+        val response1 = client.newCall(request).execute()
+        assertEquals(1, cache.requestCount())
+        assertEquals(1, cache.networkCount())
+        assertEquals(0, cache.hitCount())
+        assertEquals("First Response", response1.body()?.string())
+
+        val response2 = client.newCall(request).execute()
+        assertEquals(2, cache.requestCount())
+        assertEquals(2, cache.networkCount())
+        assertEquals(0, cache.hitCount())
+        assertEquals("Second Response", response2.body()?.string())
+
+        val response3 = client.newCall(request).execute()
+        assertEquals(3, cache.requestCount())
+        assertEquals(3, cache.networkCount())
+        assertEquals(1, cache.hitCount())
+        assertEquals("Second Response", response3.body()?.string())
+
+        val response4 = client.newCall(request).execute()
+        assertEquals(4, cache.requestCount())
+        assertEquals(4, cache.networkCount())
+        assertEquals(2, cache.hitCount())
+        assertEquals("Second Response", response4.body()?.string())
+    }
+
+    @Test
+    fun testNoStoreHeader() {
+
     }
 
     companion object {
