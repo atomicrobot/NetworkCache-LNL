@@ -1,9 +1,6 @@
 package io.atomicrobot.httpcachepresentation
 
-import okhttp3.Cache
-import okhttp3.HttpUrl
-import okhttp3.OkHttpClient
-import okhttp3.Request
+import okhttp3.*
 import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -141,6 +138,36 @@ class HttpCacheTests {
     }
 
     @Test
+    fun testEtagAndMaxAge() {
+        server.enqueue(MockResponse()
+                .setHeader("cache-control", "private, max-age=1")
+                .setHeader("ETag", "v1")
+                .setBody("First Response"))
+        server.enqueue(MockResponse()
+                .setResponseCode(304))
+
+        val response1 = client.newCall(request).execute()
+        assertEquals(1, cache.requestCount())
+        assertEquals(1, cache.networkCount())
+        assertEquals(0, cache.hitCount())
+        assertEquals("First Response", response1.body()?.string())
+
+        val response2 = client.newCall(request).execute()
+        assertEquals(2, cache.requestCount())
+        assertEquals(1, cache.networkCount())
+        assertEquals(1, cache.hitCount())
+        assertEquals("First Response", response2.body()?.string())
+
+        Thread.sleep(1000)
+
+        val response3 = client.newCall(request).execute()
+        assertEquals(3, cache.requestCount())
+        assertEquals(2, cache.networkCount())
+        assertEquals(2, cache.hitCount())
+        assertEquals("First Response", response3.body()?.string())
+    }
+
+    @Test
     fun testNoCacheHeader() {
         server.enqueue(MockResponse()
                 .setHeader("cache-control", "no-cache")
@@ -202,7 +229,143 @@ class HttpCacheTests {
 
     @Test
     fun testNoStoreHeader() {
+        server.enqueue(MockResponse()
+                .setHeader("cache-control", "no-store")
+                .setBody("First Response"))
+        server.enqueue(MockResponse()
+                .setHeader("cache-control", "no-store")
+                .setHeader("ETag", "v1")
+                .setBody("Second Response"))
+        server.enqueue(MockResponse()
+                .setHeader("cache-control", "no-store")
+                .setResponseCode(304))
 
+        val response1 = client.newCall(request).execute()
+        assertEquals(1, cache.requestCount())
+        assertEquals(1, cache.networkCount())
+        assertEquals(0, cache.hitCount())
+        assertEquals("First Response", response1.body()?.string())
+
+        val response2 = client.newCall(request).execute()
+        assertEquals(2, cache.requestCount())
+        assertEquals(2, cache.networkCount())
+        assertEquals(0, cache.hitCount())
+        assertEquals("Second Response", response2.body()?.string())
+
+        val response3 = client.newCall(request).execute()
+        assertEquals(3, cache.requestCount())
+        assertEquals(3, cache.networkCount())
+        assertEquals(0, cache.hitCount())
+        assertEquals("", response3.body()?.string())
+    }
+
+    @Test
+    fun testAllTheThingsPart1() {
+        server.enqueue(MockResponse()
+                .setHeader("cache-control", "private, no-cache, max-age=1")
+                .setHeader("ETag", "v1")
+                .setBody("First Response"))
+        server.enqueue(MockResponse()
+                .setResponseCode(304))
+
+        val response1 = client.newCall(request).execute()
+        assertEquals(1, cache.requestCount())
+        assertEquals(1, cache.networkCount())
+        assertEquals(0, cache.hitCount())
+        assertEquals("First Response", response1.body()?.string())
+
+        val response2 = client.newCall(request).execute()
+        assertEquals(2, cache.requestCount())
+        assertEquals(2, cache.networkCount())
+        assertEquals(1, cache.hitCount())
+        assertEquals("First Response", response2.body()?.string())
+    }
+
+    // Bonus Time!
+    @Test
+    fun testForceNetwork() {
+        server.enqueue(MockResponse()
+                .setHeader("cache-control", "private, max-age=1")
+                .setHeader("ETag", "v1")
+                .setBody("First Response"))
+        server.enqueue(MockResponse()
+                .setHeader("cache-control", "private, max-age=1")
+                .setHeader("ETag", "v1")
+                .setBody("First Response"))
+
+        val response1 = client.newCall(request).execute()
+        assertEquals(1, cache.requestCount())
+        assertEquals(1, cache.networkCount())
+        assertEquals(0, cache.hitCount())
+        assertEquals("First Response", response1.body()?.string())
+
+        val response2 = client.newCall(
+                request.newBuilder()
+                        .cacheControl(CacheControl.FORCE_NETWORK)
+                        .build())
+                .execute()
+        assertEquals(2, cache.requestCount())
+        assertEquals(2, cache.networkCount())
+        assertEquals(0, cache.hitCount())
+        assertEquals("First Response", response2.body()?.string())
+    }
+
+    @Test
+    fun testForceCache() {
+        server.enqueue(MockResponse()
+                .setHeader("cache-control", "private, max-age=1")
+                .setHeader("ETag", "v1")
+                .setBody("First Response"))
+        server.enqueue(MockResponse()
+                .setHeader("cache-control", "private, max-age=1")
+                .setHeader("ETag", "v1")
+                .setBody("Second Response"))
+
+        val response1 = client.newCall(request).execute()
+        assertEquals(1, cache.requestCount())
+        assertEquals(1, cache.networkCount())
+        assertEquals(0, cache.hitCount())
+        assertEquals("First Response", response1.body()?.string())
+
+        Thread.sleep(1000)
+
+        val response2 = client.newCall(
+                request.newBuilder()
+                        .cacheControl(CacheControl.FORCE_CACHE)
+                        .build())
+                .execute()
+        assertEquals(2, cache.requestCount())
+        assertEquals(1, cache.networkCount())
+        assertEquals(1, cache.hitCount())
+        assertEquals("First Response", response2.body()?.string())
+    }
+
+    @Test
+    fun testForceCacheWithNoData() {
+        val response1 = client.newCall(
+                request.newBuilder()
+                        .cacheControl(CacheControl.FORCE_CACHE)
+                        .build())
+                .execute()
+        assertEquals(1, cache.requestCount())
+        assertEquals(0, cache.networkCount())
+        assertEquals(0, cache.hitCount())
+        assertEquals(504, response1.code()) // 504 Unsatisfiable
+
+        server.enqueue(MockResponse()
+                .setHeader("cache-control", "no-store")
+                .setBody("First Response"))
+        client.newCall(request).execute()
+
+        val response2 = client.newCall(
+                request.newBuilder()
+                        .cacheControl(CacheControl.FORCE_CACHE)
+                        .build())
+                .execute()
+        assertEquals(3, cache.requestCount())
+        assertEquals(1, cache.networkCount())
+        assertEquals(0, cache.hitCount())
+        assertEquals(504, response2.code()) // 504 Unsatisfiable
     }
 
     companion object {
