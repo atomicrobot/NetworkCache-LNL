@@ -25,8 +25,8 @@ class HttpCacheTests {
     lateinit var cache: Cache
     lateinit var request: Request
 
-    val wrong = Int.MAX_VALUE
-    val wrongString = "Not the correct value"
+    private val wrong = Int.MAX_VALUE
+    private val wrongString = "Not the correct value"
 
     @Before
     fun setup() {
