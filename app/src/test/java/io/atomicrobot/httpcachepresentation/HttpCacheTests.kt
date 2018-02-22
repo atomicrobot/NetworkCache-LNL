@@ -25,6 +25,9 @@ class HttpCacheTests {
     lateinit var cache: Cache
     lateinit var request: Request
 
+    val wrong = Int.MAX_VALUE
+    val wrongString = "Not the correct value"
+
     @Before
     fun setup() {
         Logger.getLogger(MockWebServer::class.java.name).level = Level.OFF
@@ -147,23 +150,23 @@ class HttpCacheTests {
                 .setResponseCode(304))
 
         val response1 = client.newCall(request).execute()
-        assertEquals(1, cache.requestCount())
-        assertEquals(1, cache.networkCount())
-        assertEquals(0, cache.hitCount())
+        assertEquals(wrong, cache.requestCount())
+        assertEquals(wrong, cache.networkCount())
+        assertEquals(wrong, cache.hitCount())
         assertEquals("First Response", response1.body()?.string())
 
         val response2 = client.newCall(request).execute()
-        assertEquals(2, cache.requestCount())
-        assertEquals(1, cache.networkCount())
-        assertEquals(1, cache.hitCount())
+        assertEquals(wrong, cache.requestCount())
+        assertEquals(wrong, cache.networkCount())
+        assertEquals(wrong, cache.hitCount())
         assertEquals("First Response", response2.body()?.string())
 
         Thread.sleep(1000)
 
         val response3 = client.newCall(request).execute()
-        assertEquals(3, cache.requestCount())
-        assertEquals(2, cache.networkCount())
-        assertEquals(2, cache.hitCount())
+        assertEquals(wrong, cache.requestCount())
+        assertEquals(wrong, cache.networkCount())
+        assertEquals(wrong, cache.hitCount())
         assertEquals("First Response", response3.body()?.string())
     }
 
@@ -176,16 +179,16 @@ class HttpCacheTests {
                 .setBody("Second Response"))
 
         val response1 = client.newCall(request).execute()
-        assertEquals(1, cache.requestCount())
-        assertEquals(1, cache.networkCount())
-        assertEquals(0, cache.hitCount())
-        assertEquals("First Response", response1.body()?.string())
+        assertEquals(wrong, cache.requestCount())
+        assertEquals(wrong, cache.networkCount())
+        assertEquals(wrong, cache.hitCount())
+        assertEquals(wrongString, response1.body()?.string())
 
         val response2 = client.newCall(request).execute()
-        assertEquals(2, cache.requestCount())
-        assertEquals(2, cache.networkCount())
-        assertEquals(0, cache.hitCount())
-        assertEquals("Second Response", response2.body()?.string())
+        assertEquals(wrong, cache.requestCount())
+        assertEquals(wrong, cache.networkCount())
+        assertEquals(wrong, cache.hitCount())
+        assertEquals(wrongString, response2.body()?.string())
     }
 
     @Test
@@ -203,28 +206,28 @@ class HttpCacheTests {
                 .setResponseCode(304))
 
         val response1 = client.newCall(request).execute()
-        assertEquals(1, cache.requestCount())
-        assertEquals(1, cache.networkCount())
-        assertEquals(0, cache.hitCount())
-        assertEquals("First Response", response1.body()?.string())
+        assertEquals(wrong, cache.requestCount())
+        assertEquals(wrong, cache.networkCount())
+        assertEquals(wrong, cache.hitCount())
+        assertEquals(wrongString, response1.body()?.string())
 
         val response2 = client.newCall(request).execute()
-        assertEquals(2, cache.requestCount())
-        assertEquals(2, cache.networkCount())
-        assertEquals(0, cache.hitCount())
-        assertEquals("Second Response", response2.body()?.string())
+        assertEquals(wrong, cache.requestCount())
+        assertEquals(wrong, cache.networkCount())
+        assertEquals(wrong, cache.hitCount())
+        assertEquals(wrongString, response2.body()?.string())
 
         val response3 = client.newCall(request).execute()
-        assertEquals(3, cache.requestCount())
-        assertEquals(3, cache.networkCount())
-        assertEquals(1, cache.hitCount())
-        assertEquals("Second Response", response3.body()?.string())
+        assertEquals(wrong, cache.requestCount())
+        assertEquals(wrong, cache.networkCount())
+        assertEquals(wrong, cache.hitCount())
+        assertEquals(wrongString, response3.body()?.string())
 
         val response4 = client.newCall(request).execute()
-        assertEquals(4, cache.requestCount())
-        assertEquals(4, cache.networkCount())
-        assertEquals(2, cache.hitCount())
-        assertEquals("Second Response", response4.body()?.string())
+        assertEquals(wrong, cache.requestCount())
+        assertEquals(wrong, cache.networkCount())
+        assertEquals(wrong, cache.hitCount())
+        assertEquals(wrongString, response4.body()?.string())
     }
 
     @Test
@@ -241,22 +244,22 @@ class HttpCacheTests {
                 .setResponseCode(304))
 
         val response1 = client.newCall(request).execute()
-        assertEquals(1, cache.requestCount())
-        assertEquals(1, cache.networkCount())
-        assertEquals(0, cache.hitCount())
-        assertEquals("First Response", response1.body()?.string())
+        assertEquals(wrong, cache.requestCount())
+        assertEquals(wrong, cache.networkCount())
+        assertEquals(wrong, cache.hitCount())
+        assertEquals(wrongString, response1.body()?.string())
 
         val response2 = client.newCall(request).execute()
-        assertEquals(2, cache.requestCount())
-        assertEquals(2, cache.networkCount())
-        assertEquals(0, cache.hitCount())
-        assertEquals("Second Response", response2.body()?.string())
+        assertEquals(wrong, cache.requestCount())
+        assertEquals(wrong, cache.networkCount())
+        assertEquals(wrong, cache.hitCount())
+        assertEquals(wrongString, response2.body()?.string())
 
         val response3 = client.newCall(request).execute()
-        assertEquals(3, cache.requestCount())
-        assertEquals(3, cache.networkCount())
-        assertEquals(0, cache.hitCount())
-        assertEquals("", response3.body()?.string())
+        assertEquals(wrong, cache.requestCount())
+        assertEquals(wrong, cache.networkCount())
+        assertEquals(wrong, cache.hitCount())
+        assertEquals(wrongString, response3.body()?.string())
     }
 
     @Test
@@ -269,15 +272,15 @@ class HttpCacheTests {
                 .setResponseCode(304))
 
         val response1 = client.newCall(request).execute()
-        assertEquals(1, cache.requestCount())
-        assertEquals(1, cache.networkCount())
-        assertEquals(0, cache.hitCount())
+        assertEquals(wrong, cache.requestCount())
+        assertEquals(wrong, cache.networkCount())
+        assertEquals(wrong, cache.hitCount())
         assertEquals("First Response", response1.body()?.string())
 
         val response2 = client.newCall(request).execute()
-        assertEquals(2, cache.requestCount())
-        assertEquals(2, cache.networkCount())
-        assertEquals(1, cache.hitCount())
+        assertEquals(wrong, cache.requestCount())
+        assertEquals(wrong, cache.networkCount())
+        assertEquals(wrong, cache.hitCount())
         assertEquals("First Response", response2.body()?.string())
     }
 
@@ -294,9 +297,9 @@ class HttpCacheTests {
                 .setBody("First Response"))
 
         val response1 = client.newCall(request).execute()
-        assertEquals(1, cache.requestCount())
-        assertEquals(1, cache.networkCount())
-        assertEquals(0, cache.hitCount())
+        assertEquals(wrong, cache.requestCount())
+        assertEquals(wrong, cache.networkCount())
+        assertEquals(wrong, cache.hitCount())
         assertEquals("First Response", response1.body()?.string())
 
         val response2 = client.newCall(
@@ -304,9 +307,9 @@ class HttpCacheTests {
                         .cacheControl(CacheControl.FORCE_NETWORK)
                         .build())
                 .execute()
-        assertEquals(2, cache.requestCount())
-        assertEquals(2, cache.networkCount())
-        assertEquals(0, cache.hitCount())
+        assertEquals(wrong, cache.requestCount())
+        assertEquals(wrong, cache.networkCount())
+        assertEquals(wrong, cache.hitCount())
         assertEquals("First Response", response2.body()?.string())
     }
 
@@ -322,10 +325,10 @@ class HttpCacheTests {
                 .setBody("Second Response"))
 
         val response1 = client.newCall(request).execute()
-        assertEquals(1, cache.requestCount())
-        assertEquals(1, cache.networkCount())
-        assertEquals(0, cache.hitCount())
-        assertEquals("First Response", response1.body()?.string())
+        assertEquals(wrong, cache.requestCount())
+        assertEquals(wrong, cache.networkCount())
+        assertEquals(wrong, cache.hitCount())
+        assertEquals(wrongString, response1.body()?.string())
 
         Thread.sleep(1000)
 
@@ -334,10 +337,10 @@ class HttpCacheTests {
                         .cacheControl(CacheControl.FORCE_CACHE)
                         .build())
                 .execute()
-        assertEquals(2, cache.requestCount())
-        assertEquals(1, cache.networkCount())
-        assertEquals(1, cache.hitCount())
-        assertEquals("First Response", response2.body()?.string())
+        assertEquals(wrong, cache.requestCount())
+        assertEquals(wrong, cache.networkCount())
+        assertEquals(wrong, cache.hitCount())
+        assertEquals(wrongString, response2.body()?.string())
     }
 
     @Test
